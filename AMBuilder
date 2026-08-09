@@ -19,6 +19,7 @@ for sdk_target in MMSPlugin.sdk_targets:
 
   binary.sources += [
     'FixMotd.cpp',
+    'tier0_stubs.cpp',
     os.path.join('..', 'SchemaEntity', 'schemasystem.cpp'),
   ]
 

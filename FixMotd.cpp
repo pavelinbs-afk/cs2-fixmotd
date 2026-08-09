@@ -170,7 +170,7 @@ const char* FixMotd::GetLicense()
 
 const char* FixMotd::GetVersion()
 {
-	return "1.0";
+	return "1.0.1";
 }
 
 const char* FixMotd::GetDate()
