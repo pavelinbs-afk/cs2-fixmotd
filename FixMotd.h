@@ -2,22 +2,10 @@
 #define _INCLUDE_METAMOD_SOURCE_STUB_PLUGIN_H_
 
 #include <ISmmPlugin.h>
-#include <sh_vector.h>
-#include "utlvector.h"
-#include "ehandle.h"
 #include <iserver.h>
-#include <entity2/entitysystem.h>
-#include "igameevents.h"
-#include "vector.h"
-#include <deque>
-#include <functional>
-#include <utlstring.h>
-#include <KeyValues.h>
-#include "CCSPlayerController.h"
-#include "include/menus.h"
-#include "networkstringtabledefs.h"
-#include <fstream>
 #include <string>
+#include "convar.h"
+#include "networkstringtabledefs.h"
 
 class FixMotd final : public ISmmPlugin, public IMetamodListener
 {
@@ -26,6 +14,8 @@ public:
 	bool Unload(char* error, size_t maxlen);
 	void AllPluginsLoaded();
 	void OnLevelInit(char const* pMapName, char const* pMapEntities, char const* pOldLevel, char const* pLandmarkName, bool loadGame, bool background);
+
+	void Hook_GameFrame(bool simulating, bool bFirstTick, bool bLastTick);
 private:
 	const char* GetAuthor();
 	const char* GetName();
@@ -38,6 +28,8 @@ private:
 
 	void UpdateMotdTable();
 	bool IsValidUrl(const std::string& url);
+
+	bool m_bPendingMotdUpdate = false;
 };
 
 extern INetworkStringTableContainer* g_pNetworkStringTableServer;

@@ -1,71 +1,54 @@
 #include <stdio.h>
 #include "FixMotd.h"
-#include "schemasystem/schemasystem.h"
 #include <fstream>
 #include <string>
-#include <vector>
 #include <cstring>
+
+SH_DECL_HOOK3_void(IServerGameDLL, GameFrame, SH_NOATTRIB, 0, bool, bool, bool);
 
 FixMotd g_FixMotd;
 PLUGIN_EXPOSE(FixMotd, g_FixMotd);
-IVEngineServer2* engine = nullptr;
-CGameEntitySystem* g_pGameEntitySystem = nullptr;
-CEntitySystem* g_pEntitySystem = nullptr;
-CGlobalVars *gpGlobals = nullptr;
 
-IUtilsApi* g_pUtils;
-
-CGameEntitySystem* GameEntitySystem()
-{
-	return g_pUtils->GetCGameEntitySystem();
-}
-
-void StartupServer()
-{
-	g_pGameEntitySystem = GameEntitySystem();
-	g_pEntitySystem = g_pUtils->GetCEntitySystem();
-	gpGlobals = g_pUtils->GetCGlobalVars();
-}
+ISource2Server* g_pSource2Server = nullptr;
+INetworkStringTableContainer* g_pNetworkStringTableServer = nullptr;
 
 bool FixMotd::Load(PluginId id, ISmmAPI* ismm, char* error, size_t maxlen, bool late)
 {
 	PLUGIN_SAVEVARS();
 
 	GET_V_IFACE_CURRENT(GetEngineFactory, g_pCVar, ICvar, CVAR_INTERFACE_VERSION);
-	GET_V_IFACE_ANY(GetEngineFactory, g_pSchemaSystem, ISchemaSystem, SCHEMASYSTEM_INTERFACE_VERSION);
-	GET_V_IFACE_CURRENT(GetEngineFactory, engine, IVEngineServer2, SOURCE2ENGINETOSERVER_INTERFACE_VERSION);
 	GET_V_IFACE_CURRENT(GetEngineFactory, g_pNetworkStringTableServer, INetworkStringTableContainer, INTERFACENAME_NETWORKSTRINGTABLESERVER);
-	GET_V_IFACE_CURRENT(GetFileSystemFactory, g_pFullFileSystem, IFileSystem, FILESYSTEM_INTERFACE_VERSION);
+	GET_V_IFACE_ANY(GetServerFactory, g_pSource2Server, ISource2Server, SOURCE2SERVER_INTERFACE_VERSION);
 
-	g_SMAPI->AddListener( this, this );
+	g_SMAPI->AddListener(this, this);
+	SH_ADD_HOOK(IServerGameDLL, GameFrame, g_pSource2Server, SH_MEMBER(this, &FixMotd::Hook_GameFrame), true);
+
+	if (late)
+	{
+		m_bPendingMotdUpdate = true;
+	}
 
 	return true;
 }
 
 bool FixMotd::Unload(char *error, size_t maxlen)
 {
+	SH_REMOVE_HOOK(IServerGameDLL, GameFrame, g_pSource2Server, SH_MEMBER(this, &FixMotd::Hook_GameFrame), true);
 	ConVar_Unregister();
-	
 	return true;
 }
 
 void FixMotd::AllPluginsLoaded()
 {
-	char error[64];
-	int ret;
-	g_pUtils = (IUtilsApi *)g_SMAPI->MetaFactory(Utils_INTERFACE, &ret, NULL);
-	if (ret == META_IFACE_FAILED)
-	{
-		g_SMAPI->Format(error, sizeof(error), "Missing Utils system plugin");
-		ConColorMsg(Color(255, 0, 0, 255), "[%s] %s\n", GetLogTag(), error);
-		std::string sBuffer = "meta unload "+std::to_string(g_PLID);
-		engine->ServerCommand(sBuffer.c_str());
+}
+
+void FixMotd::Hook_GameFrame(bool simulating, bool bFirstTick, bool bLastTick)
+{
+	if (!m_bPendingMotdUpdate)
 		return;
-	}
-	g_pUtils->StartupServer(g_PLID, StartupServer);
-	g_pUtils->MapStartHook(g_PLID, [](const char* szMap) {
-		g_FixMotd.OnLevelInit(szMap, nullptr, nullptr, nullptr, false, false);
-	});
+
+	m_bPendingMotdUpdate = false;
+	UpdateMotdTable();
 }
 
 bool FixMotd::IsValidUrl(const std::string& url)
@@ -127,11 +110,11 @@ void FixMotd::UpdateMotdTable()
 	}
 
 	int urlLen = (int)url.length() + 1;
-	
+
 	SetStringUserDataRequest_t userData{};
 	userData.m_pRawData = const_cast<void*>(static_cast<const void*>(url.c_str()));
 	userData.m_cbDataSize = static_cast<unsigned int>(urlLen);
-	
+
 	int stringIndex = pTable->FindStringIndex("motd");
 	if (stringIndex == (int)INVALID_STRING_INDEX)
 	{
@@ -158,9 +141,7 @@ void FixMotd::UpdateMotdTable()
 
 void FixMotd::OnLevelInit(char const* pMapName, char const* pMapEntities, char const* pOldLevel, char const* pLandmarkName, bool loadGame, bool background)
 {
-	g_pUtils->NextFrame([this]() {
-		UpdateMotdTable();
-	});
+	m_bPendingMotdUpdate = true;
 }
 
 const char* FixMotd::GetLicense()
@@ -170,7 +151,7 @@ const char* FixMotd::GetLicense()
 
 const char* FixMotd::GetVersion()
 {
-	return "1.0.1";
+	return "1.1.0";
 }
 
 const char* FixMotd::GetDate()

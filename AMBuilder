@@ -12,19 +12,12 @@ for sdk_target in MMSPlugin.sdk_targets:
     os.path.join(sdk['path'], 'common', 'network_connection.proto')
   ])]
   
-  binary.compiler.cxxincludes += [
-    os.path.join(builder.sourcePath, 'include'),
-    os.path.join(builder.sourcePath, '..', 'SchemaEntity'),
-  ]
-
   binary.sources += [
     'FixMotd.cpp',
     'tier0_stubs.cpp',
-    os.path.join('..', 'SchemaEntity', 'schemasystem.cpp'),
   ]
 
   if cxx.target.arch == 'x86':
     binary.sources += ['sourcehook/sourcehook_hookmangen.cpp']
   nodes = builder.Add(binary)
   MMSPlugin.binaries += [nodes]
-    
