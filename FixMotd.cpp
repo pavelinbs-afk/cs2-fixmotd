@@ -64,8 +64,8 @@ void FixMotd::UpdateMotdTable()
 		return;
 	}
 
+	std::string motdFileName = "motd.txt";
 	ConVarRefAbstract hMotdFile("motdfile");
-	const char* motdFileName = "motd.txt";
 	if (hMotdFile.IsValidRef() && hMotdFile.IsConVarDataAvailable())
 	{
 		CUtlString motdValue = hMotdFile.GetString();
@@ -76,7 +76,7 @@ void FixMotd::UpdateMotdTable()
 	}
 
 	char szMotdPath[512];
-	g_SMAPI->PathFormat(szMotdPath, sizeof(szMotdPath), "%s/%s", g_SMAPI->GetBaseDir(), motdFileName);
+	g_SMAPI->PathFormat(szMotdPath, sizeof(szMotdPath), "%s/%s", g_SMAPI->GetBaseDir(), motdFileName.c_str());
 
 	std::ifstream file(szMotdPath);
 	if (!file.is_open())
